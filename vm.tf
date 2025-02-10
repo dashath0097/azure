@@ -10,7 +10,7 @@ terraform {
     organization = "your-spacelift-org"
 
     workspaces {
-      name = "azure-storage-account"
+      name = "azure-blob-storage"
     }
   }
 }
@@ -30,7 +30,7 @@ resource "azurerm_resource_group" "rg" {
   location = var.location
 }
 
-# Create Storage Account
+# Create Storage Account (Equivalent to S3 in Azure)
 resource "azurerm_storage_account" "storage" {
   name                     = var.storage_account_name
   resource_group_name      = azurerm_resource_group.rg.name
@@ -40,7 +40,7 @@ resource "azurerm_storage_account" "storage" {
   allow_blob_public_access = false
 }
 
-# Create a Storage Container for Blobs
+# Create Blob Storage Container (Equivalent to S3 Bucket)
 resource "azurerm_storage_container" "container" {
   name                  = "spacelift-container"
   storage_account_name  = azurerm_storage_account.storage.name
