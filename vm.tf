@@ -1,79 +1,77 @@
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
+    }
+  }
+
+  cloud {
+    organization = "your-spacelift-org"
+
+    workspaces {
+      name = "azure-storage-account"
+    }
+  }
+}
+
 provider "azurerm" {
   features {}
+
+  subscription_id = var.subscription_id
+  client_id       = var.client_id
+  client_secret   = var.client_secret
+  tenant_id       = var.tenant_id
 }
 
-# Define variables
+# Create Resource Group
+resource "azurerm_resource_group" "rg" {
+  name     = var.resource_group_name
+  location = var.location
+}
+
+# Create Storage Account
+resource "azurerm_storage_account" "storage" {
+  name                     = var.storage_account_name
+  resource_group_name      = azurerm_resource_group.rg.name
+  location                 = azurerm_resource_group.rg.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  allow_blob_public_access = false
+}
+
+# Create a Storage Container for Blobs
+resource "azurerm_storage_container" "container" {
+  name                  = "spacelift-container"
+  storage_account_name  = azurerm_storage_account.storage.name
+  container_access_type = "private"
+}
+
+# Outputs
+output "storage_account_name" {
+  value = azurerm_storage_account.storage.name
+}
+
+output "storage_account_primary_key" {
+  value     = azurerm_storage_account.storage.primary_access_key
+  sensitive = true
+}
+
+output "storage_container_url" {
+  value = azurerm_storage_container.container.id
+}
+
+# Variables
+variable "subscription_id" {}
+variable "client_id" {}
+variable "client_secret" {}
+variable "tenant_id" {}
 variable "resource_group_name" {
-  default = "spacelift-rg"  # Change to your existing Resource Group
+  default = "spacelift-rg"
 }
-
 variable "location" {
   default = "East US"
 }
-
-variable "vm_name" {
-  default = "spacelift-vm"
-}
-
-variable "admin_username" {
-  default = "azureuser"
-}
-
-variable "admin_password" {
-  default = "SecureP@ssw0rd!"  # Not recommended for production
-}
-
-variable "nic_name" {
-  default = "spacelift-nic"  # Replace with existing NIC name
-}
-
-variable "public_ip_name" {
-  default = "spacelift-public-ip"  # Replace with your existing Public IP name
-}
-
-# Reference an existing Network Interface
-data "azurerm_network_interface" "nic" {
-  name                = var.nic_name
-  resource_group_name = var.resource_group_name
-}
-
-# Fetch the associated Public IP
-data "azurerm_public_ip" "public_ip" {
-  name                = var.public_ip_name
-  resource_group_name = var.resource_group_name
-}
-
-# Create a Virtual Machine
-resource "azurerm_linux_virtual_machine" "vm" {
-  name                  = var.vm_name
-  resource_group_name   = var.resource_group_name
-  location              = var.location
-  size                  = "Standard_B1s"
-  admin_username        = var.admin_username
-  admin_password        = var.admin_password
-  disable_password_authentication = false
-
-  network_interface_ids = [data.azurerm_network_interface.nic.id]
-
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "18.04-LTS"
-    version   = "latest"
-  }
-}
-
-# Output VM Details
-output "vm_id" {
-  value = azurerm_linux_virtual_machine.vm.id
-}
-
-# Corrected Output for Public IP
-output "vm_public_ip" {
-  value = data.azurerm_public_ip.public_ip.ip_address
+variable "storage_account_name" {
+  default = "spaceliftstorage1234" # Must be globally unique
 }
