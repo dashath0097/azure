@@ -2,13 +2,30 @@ provider "azurerm" {
   features {}
 }
 
+resource "tls_private_key" "ssh" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "local_file" "private_key" {
+  filename        = "${path.module}/id_rsa"
+  content         = tls_private_key.ssh.private_key_pem
+  file_permission = "0600"
+}
+
+resource "local_file" "public_key" {
+  filename        = "${path.module}/id_rsa.pub"
+  content         = tls_private_key.ssh.public_key_openssh
+  file_permission = "0644"
+}
+
 resource "azurerm_resource_group" "rg" {
   name     = "DashathRG"
   location = "East US"
 }
 
 resource "azurerm_virtual_network" "vnet" {
-  name                = "DashathVM"
+  name                = "DashathVNet"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   address_space       = ["10.0.0.0/16"]
@@ -40,13 +57,12 @@ resource "azurerm_linux_virtual_machine" "vm" {
   size                = "Standard_B1s"
   admin_username      = "azureuser"
   network_interface_ids = [azurerm_network_interface.nic.id]
-  disable_password_authentication = false
-  
+  disable_password_authentication = true
+
   admin_ssh_key {
     username   = "azureuser"
-    public_key = file("~/.ssh/id_rsa.pub")  # Ensure this file exists
+    public_key = tls_private_key.ssh.public_key_openssh
   }
-  
 
   os_disk {
     caching              = "ReadWrite"
@@ -61,6 +77,14 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 }
 
-output "vm_public_ip" {
-  value = azurerm_network_interface.nic.id
+output "vm_private_key_path" {
+  value = local_file.private_key.filename
+}
+
+output "vm_public_key" {
+  value = tls_private_key.ssh.public_key_openssh
+}
+
+output "vm_private_ip" {
+  value = azurerm_network_interface.nic.private_ip_address
 }
