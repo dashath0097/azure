@@ -1,6 +1,8 @@
 provider "azurerm" {
   features {}
+  subscription_id = "859b0b4e-52b8-4335-84dc-f66eeeb550a3"
 }
+
 
 resource "tls_private_key" "ssh" {
   algorithm = "RSA"
